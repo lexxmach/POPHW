@@ -1,23 +1,65 @@
 version: '3.8'
 services:
-  db:
-    image: postgres:14.1-alpine
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+  # db:
+  #   image: postgres:14.1-alpine
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #   ports:
+  #     - 5010:5432
+  #   volumes: 
+  #     - db:/var/lib/postgresql/data
+  #   networks:
+  #     - common_network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
     ports:
-      - 5010:5432
-    volumes: 
-      - db:/var/lib/postgresql/data
+      - 2181:2181
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
     networks:
       - common_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    networks:
+      - common_network
+
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    networks:
+      - common_network
+
+  worker:
+    container_name: worker
+    build:
+      context: ../
+      dockerfile: ./build/worker/Dockerfile
+    depends_on:
+      - redis
+      - kafka
+    image: worker
     restart: unless-stopped
+    networks:
+      - common_network
 
   server:
     container_name: server
@@ -25,17 +67,14 @@ services:
       context: ../
       dockerfile: ./build/server/Dockerfile
     image: server
-    depends_on:
-      db:
-        condition: service_healthy
     ports:
       - 8080:8080
+    depends_on:
+      - worker
+    restart: unless-stopped
     networks:
       - common_network
-    restart: unless-stopped
 
-volumes:
-  db:
-    driver: local
 networks:
   common_network:
+    driver: bridge

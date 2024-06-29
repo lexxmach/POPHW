@@ -18,7 +18,7 @@ func (storage *StorageMock) Append(msg *models.StorageMessage) error {
 
 func (storage *StorageMock) GetLatest(limit int) ([]models.StorageMessage, error) {
 	sort.Slice(storage.messages, func(i, j int) bool {
-		return storage.messages[i].TimeStamp > storage.messages[j].TimeStamp
+		return storage.messages[i].TimeStamp.UnixMilli() > storage.messages[j].TimeStamp.UnixMilli()
 	})
 
 	refSlice := make([]models.StorageMessage, min(limit, len(storage.messages)))
