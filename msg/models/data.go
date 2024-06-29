@@ -11,7 +11,7 @@ type SocketMessage struct {
 
 type StorageMessage struct {
 	Id        int           `gorm:"primary_key, AUTO_INCREMENT"`
-	TimeStamp string        `json:"timestamp"`
+	TimeStamp time.Time     `json:"timestamp"`
 	Message   SocketMessage `json:"msg" gorm:"embedded"`
 }
 
@@ -28,7 +28,7 @@ func CreateMessageDB(msg *SocketMessage) *StorageMessage {
 	}
 
 	return &StorageMessage{
-		TimeStamp: time.Now().Format(time.DateTime),
+		TimeStamp: time.Now(),
 		Message:   *msg,
 	}
 }

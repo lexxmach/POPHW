@@ -1,8 +1,6 @@
 {
-    "address": ":8080",
-
     "db": {
-        "type": "kafka",
+        "type": "worker",
 
         "kafka": {
             "host": "kafka:9092",
